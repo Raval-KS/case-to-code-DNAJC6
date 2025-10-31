@@ -1,0 +1,2170 @@
+---
+title: "Case-to-Code: A DNAJC6 Analysis"
+author: "Raval Kush"
+format: 
+  html:
+    code-fold: true
+    toc: true
+    toc-float: true
+    theme: cosmo
+    embed-resources: true
+editor: visual
+---
+
+# CASE TO CODE : INFANTILE PARKINSONISM
+
+## 
+
+## \*\*Visualizing the structural defects in DNAJC6 after altered genotype \*\*
+
+```{r}
+#| label: Structural and clinical context
+
+# Structural & Clinical Context
+
+# --- 1. Load Libraries ---
+library(r3dmol)
+library(htmltools)
+library(knitr)
+
+# --- 2. Create the Corrected Mutation Table ---
+# (This section remains unchanged)
+patient_genotypes <- data.frame(
+  Sample_Group = c("Control", "CRISPR_P1", "Patient1", "Patient2", "Patient3"),
+  Genotype = c(
+    "Wild-type",
+    "CRISPR-corrected (from Patient 1)",
+    "c.766C>T (homozygous)",
+    "c.2416C>T (homozygous)",
+    "c.801-2 A>G (homozygous)"
+  ),
+  Mutation_Type = c(
+    "Normal",
+    "Corrected to WT",
+    "Nonsense (Exon 6)",
+    "Nonsense (Exon 16)",
+    "Splice acceptor (Exon 7)"
+  ),
+  Predicted_Protein = c(
+    "Full-length DNAJC6 (910 aa)",
+    "Full-length DNAJC6 (910 aa)",
+    "p.R256* - Truncated at residue 256",
+    "p.R806* - Truncated at residue 806",
+    "Aberrant splicing → likely NMD or exon 7 skip"
+  ),
+  Functional_Consequence = c(
+    "Normal auxilin function",
+    "Restored auxilin function",
+    "Loss of 72% of protein (clathrin-binding LOST)",
+    "Loss of 11% of protein (clathrin-binding LOST)",
+    "Likely complete loss of function"
+  )
+)
+
+knitr::kable(patient_genotypes, 
+             caption = "DNAJC6 Genotypes Across Patient Samples",
+             align = "l")
+
+# --- 3. Define Key Features & Domains ---
+protein_length <- 913   
+
+# Domain coordinates (User-specified)
+phosphatase_tensin_domain_start <- 55
+phosphatase_tensin_domain_end <- 222
+C2_tensin_domain_start <- 228
+C2_tensin_domain_end <- 366
+j_domain_start <- 849
+j_domain_end <- 913
+
+# Mutation locations
+mut_p1_residue <- 256 # p.R256*
+mut_p2_residue <- 806 # p.R806*
+
+# Exon 7 boundaries (approximate)
+exon7_start <- 267   
+exon7_end <- 317   
+
+
+# --- 4. Read PDB Data from Local File ---
+pdb_file_path <- "AF-O75061-F1-model_v6.pdb"
+pdb_data <- paste(readLines(pdb_file_path), collapse = "\n")
+
+
+# --- 5. Create Interactive 3D Visualization ---
+viewer <- r3dmol(
+  width = "100%", 
+  height = "600px",
+  viewer_spec = m_viewer_spec(
+    backgroundColor = "white"
+  )
+) %>%
+  
+  # Load the AlphaFold structure
+  m_add_model(data = pdb_data, format = "pdb") %>%
+  
+  # Base style: Color by AlphaFold confidence 
+  m_set_style(style = m_style_cartoon(color = "spectrum")) %>%
+  
+  # --- Highlight Key Functional Domains ---
+  
+  # Phosphatase Tensin-like Domain (Orange)
+  m_set_style(
+    sel = list(resi = phosphatase_tensin_domain_start:phosphatase_tensin_domain_end), 
+    style = m_style_cartoon(color = "#F39B7F", thickness = 1.2)
+  ) %>%
+  m_add_label(
+    "Phosphatase Tensin-like",
+    sel = list(resi = 138),
+    style = m_style_label(
+      backgroundColor = "#F39B7F", 
+      fontColor = "black",
+      fontSize = 12
+    )
+  ) %>%
+  
+  # C2 Tensin-like Domain (Red)
+  m_set_style(
+    sel = list(resi = C2_tensin_domain_start:C2_tensin_domain_end), 
+    style = m_style_cartoon(color = "#E64B35", thickness = 1.2)
+  ) %>%
+  m_add_label(
+    "C2 Tensin-like Domain",
+    sel = list(resi = 297),
+    style = m_style_label(
+      backgroundColor = "#E64B35", 
+      fontColor = "white",
+      fontSize = 12
+    )
+  ) %>%
+  
+  # J-Domain (Green) - HSC70 interaction
+  m_set_style(
+    sel = list(resi = j_domain_start:j_domain_end), 
+    style = m_style_cartoon(color = "#00A087", thickness = 1.2)
+  ) %>%
+  m_add_label(
+    "J-Domain (HSC70 binding)",
+    sel = list(resi = 881),
+    style = m_style_label(
+      backgroundColor = "#00A087", 
+      fontColor = "white",
+      fontSize = 12
+    )
+  ) %>%
+  
+  # --- Clathrin-Binding Domain Block REMOVED ---
+  
+  # --- Highlight Patient Mutations ---
+  
+  # Patient 1: p.R256* (Early truncation - black sphere)
+  m_add_style(
+    sel = list(resi = mut_p1_residue), 
+    style = m_style_sphere(color = "black", radius = 2.0)
+  ) %>%
+  m_add_label(
+    "P1: p.R256* TRUNCATION",
+    sel = list(resi = mut_p1_residue), 
+    style = m_style_label(
+      backgroundColor = "black", 
+      fontColor = "white",
+      fontSize = 11
+    )
+  ) %>%
+  
+  # Show what Patient 1 LOSES (gray out everything after 256)
+  m_set_style(
+    sel = list(resi = (mut_p1_residue + 1):protein_length), 
+    style = m_style_cartoon(color = "lightgray", opacity = 0.3)
+  ) %>%
+  
+  # Patient 3: Exon 7 region (Dark Gray - splice site mutation)
+  m_set_style(
+    sel = list(resi = exon7_start:exon7_end), 
+    style = m_style_cartoon(color = "#4D4D4D", thickness = 1.3)
+  ) %>%
+  m_add_label(
+    "P3: Exon 7 (Splice defect)",
+    sel = list(resi = 292), 
+    style = m_style_label(
+      backgroundColor = "#4D4D4D",
+      fontColor = "white",
+      fontSize = 11
+    )
+  ) %>%
+
+  # Patient 2: p.R806* (Late truncation - dark red sphere)
+  # This is just BEFORE the J-domain
+  m_add_style(
+    sel = list(resi = mut_p2_residue), 
+    style = m_style_sphere(color = "darkred", radius = 2.0)
+  ) %>%
+  m_add_label(
+    "P2: p.R806* TRUNCATION",
+    sel = list(resi = mut_p2_residue), 
+    style = m_style_label(
+      backgroundColor = "darkred", 
+      fontColor = "white",
+      fontSize = 11
+    )
+  ) %>%
+  
+  # Show what Patient 2 LOSES (the J-domain)
+  m_set_style(
+    sel = list(resi = (mut_p2_residue + 1):protein_length), 
+    style = m_style_cartoon(color = "pink", opacity = 0.4)
+  ) %>%
+
+  # Zoom and enable spinning for presentation
+  m_zoom_to() %>%
+  m_spin(speed = 0.5)
+
+# Display the viewer
+viewer
+
+```
+
+## \*\*RStudio Code for Analysis\*\*
+
+### PHASE 1 : Initial Requirements
+
+#### 1.1 : Setting seed and Loading required packages
+
+```{r}
+#| label: Setting seed and loading required packages
+
+# 1.1 : Setting seed and Loading required packages
+
+set.seed(123) # Or any integer you like
+
+
+#install if you havent already
+# install.packges()
+
+# For data manipulation (dplyr, tidyr) and plotting (ggplot2)
+library(tidyverse) 
+
+#install if you havent already
+# if (!require("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+
+# For differential expression analysis
+library(DESeq2)
+library(edgeR)
+
+# For our heatmap
+library(pheatmap)
+
+# For GO, KEGG, and GSEA enrichment analysis
+library(clusterProfiler) 
+library(enrichplot)
+
+#BiocManager::install('EnhancedVolcano')
+library(EnhancedVolcano)
+library(AnnotationDbi)
+library(org.Hs.eg.db) # This is the "dictionary" for human genes
+
+```
+
+### 1.2 : Defining the Analysis Parameters
+
+```{r}
+#| label: Defining the Analysis Parameters
+# 1.2 : Defining the Analysis Parameters
+
+
+
+fdr_cutoff <- 0.05
+fc_cutoff <- 2 # Fold Change (not log2)
+log2fc_cutoff <- log2(fc_cutoff)
+qval_cutoff <- 0.1
+```
+
+#### 1.3 : Loading the count data
+
+```{r}
+#| label: Loading the count data
+#| echo: true
+
+# 1.3 : Loading the count data
+
+# Define the path to your counts file
+counts_file_path <- "GSE208353_Raw_gene_counts_matrix.txt" 
+
+# Load the count data
+# header = TRUE tells R the first row contains sample names (GSMs)
+# row.names = 1 tells R the first column contains the gene names
+counts_data <- read.delim(
+  file = counts_file_path, 
+  header = TRUE, 
+  row.names = 1
+)
+
+# Always check the first few lines to make sure it loaded correctly
+# You should see gene names as row names and GSM IDs as column names
+head(counts_data)
+# view(counts_data)  #(optional)
+```
+
+#### 1.4 : Loading the series matrix data(or metadata)
+
+```{r}
+# 1.4 : Loading the series matrix data(or metadata)
+
+# Define the path to your metadata file
+metadata_file <- "metadata.csv"
+
+# Load the metadata (comma-separated .csv file)
+colData <- read.csv(
+  file = metadata_file,
+  row.names = 1 # Set the first column (sample_id) as row names
+)
+
+# Prepare Metadata for Analysis
+# We MUST convert our experimental columns from text to "factors".
+# This is how DESeq2 understands our experimental design.
+colData$group <- factor(colData$group)
+colData$genotype <- factor(colData$genotype)
+
+
+# Final Check (The "Sanity Check")
+
+# A. Visual Check: Let's look at our objects
+print(colData)
+str(colData) # You should see 'Factor' for group and genotype
+
+# B. The Critical Match Check:
+# This checks if the row names in 'colData' are in the
+# EXACT same order as the column names in 'counts_data'.
+check_result <- all(rownames(colData) == colnames(counts_data))
+
+# should return true, to verify that the metadata rows matches the counts data columns 
+
+print(check_result)
+```
+
+#### 1.5 : Validation 1: The Case
+
+```{r}
+# 1.5 : Validation 1: The Case
+
+# CHECKPOINT: Spot-Check DNAJC6 (ENSG00000116675) Counts 
+
+# Define the Ensembl ID for DNAJC6 viz ENSG00000116675
+target_gene_id <- "ENSG00000116675"
+
+# Check if the gene exists in our data
+target_gene_id %in% rownames(counts_data)
+
+# returns true when the ensembl id you designated is actually there in the rownames column of the counnts_data
+  
+# Create a data frame for our plot
+  dnajc6_plot_df <- data.frame(
+    counts = as.numeric(counts_data[target_gene_id, ]),
+    group = colData$group
+  )
+  
+# Create the plot using ggplot2
+  # We use geom_jitter() to see all the individual dots
+  sanity_check_plot <- ggplot(dnajc6_plot_df, aes(x = group, y = counts, color = group)) +
+  geom_jitter(size = 3, width = 0.1, show.legend = FALSE) +
+  theme_bw(base_size = 14) +
+  labs(
+    title = "Sanity Check: DNAJC6 (ENSG00000116675)",
+    x = "Experimental Group",
+    y = "Raw Counts"
+  )
+
+# Display the plot
+sanity_check_plot
+
+
+# Check for Nonsense-Mediated Decay (NMD)
+
+# We'll use the dnajc6_plot_df data frame we already made for the sanity check.
+# This time, we'll use a boxplot to see the distributions.
+dnajc6_counts_boxplot <- ggplot(dnajc6_plot_df, aes(x = group, y = counts, fill = group)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, size = 2) +
+  theme_bw(base_size = 14) +
+  scale_y_log10() + # Use a log scale to see differences more clearly
+  labs(
+    title = "DNAJC6 (ENSG00000116675) Expression",
+    subtitle = "Comparing Patient 1 (p.R256*), Patient 2 (p.R806*), and Patient 3 (splice-site)",
+    x = "Experimental Group",
+    y = "Raw Counts (log10 scale)"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(dnajc6_counts_boxplot)
+
+```
+
+#### 1.6 : Validation 2 : Global Quality Control using PCA
+
+```{r}
+# 1.6 : Validation 2 : Global Quality Control using PCA
+
+# Create the DESeqDataSet object
+# This object bundles our counts, metadata, and experimental design.
+# We'll use a simple design formula for this QC step.
+dds <- DESeqDataSetFromMatrix(
+  countData = counts_data,
+  colData = colData,
+  design = ~ group 
+)
+
+dds <- DESeq(dds)
+# Apply variance-stabilizing transformation (vst)
+# We MUST do this before making a PCA plot.
+# It transforms the raw, noisy count data onto a scale 
+# where samples can be fairly compared.
+# 'blind = TRUE' is important: it ensures the transformation
+# is unbiased by our experimental design.
+vsd <- vst(dds, blind = TRUE)
+
+# Generate and print the PCA plot
+# We'll use the built-in 'plotPCA' function.
+# 'intgroup' tells the plot which metadata columns to use for 
+# coloring and shaping the dots. Using both is a great idea.
+PCAplot <- plotPCA(vsd, intgroup = c("group", "genotype")) +
+    labs(
+      title = "PCA of Global Gene Expression",
+      subtitle = "Samples clustered by experimental group"
+    ) +
+    theme_bw(base_size = 14) +
+    # This makes the plot axes proportional (looks cleaner)
+    coord_fixed() 
+
+PCAplot
+```
+
+#### 1.7 : Validation 3 : Global Quality Control using Dispersion Plot
+
+```{r}
+# 1.7 : Validation 3 : Global Quality Control using Dispersion Plot
+
+# This checks DESeq2's model fitting. 
+# We want to see the black dots (gene estimates) shrinking 
+# towards the red line (fitted estimate) with blue outliers flagged.
+plotDispEsts(dds) # Use the full, unfiltered dds object before minimal filtering
+```
+
+#### 1.8 : Validation 4 : Global Quality Control using sample to sample heatmap
+
+```{r}
+# 1.8 : Validation 4 : Global Quality Control using sample to sample heatmap
+
+# This complements the PCA plot. It shows the correlation between samples.
+# We use the variance-stabilized data (vsd) we made for the PCA.
+library(RColorBrewer) # For heatmap colors
+
+# Calculate distances
+sampleDists <- dist(t(assay(vsd))) 
+sampleDistMatrix <- as.matrix(sampleDists)
+
+# Define row names based on group
+rownames(sampleDistMatrix) <- paste(vsd$group, vsd$genotype, sep="-") 
+colnames(sampleDistMatrix) <- NULL # Hide column names for clarity
+
+# Choose colors
+colorsQC <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+
+# Plot the heatmap
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDists,
+         clustering_distance_cols = sampleDists,
+         col = colorsQC,
+         main = "Sample-to-Sample Distance Heatmap")
+```
+
+#### 1.9 : Pre-filtering genes for further analysis
+
+2 methods\
+\
+
+```{r}
+# 1.9 : Pre-filtering genes for further analysis
+
+# (A) : Pre-filtering Low-Count Genes
+
+
+# (Trying to replicate what the authors did in their original work and kinda comparing that with the results of a light pre-filter before Deseq-in the next step)
+
+# Our 'dds' object still holds the raw, unfiltered da-ta.
+# Now the cpm() function will work.
+cpm_mat <- cpm(counts(dds))
+
+# Set the filter criteria
+min_cpm <- 1
+min_samples <- 3
+
+# keep_genes is a TRUE/FALSE list (op = original paper)
+keep_genes_op <- rowSums(cpm_mat >= min_cpm) >= min_samples
+
+# Now, filter the original 'dds' object
+dds_filtered_op <- dds[keep_genes_op, ]
+
+
+# Let's see how many genes we kept
+print(paste("Original gene count:", nrow(dds)))
+print(paste("Filtered gene count (original work):", nrow(dds_filtered_op)))
+
+
+# (B) : Minimal Pre-filtering (DESeq2 Best Practice) 
+
+
+# We will start from our original, full 'dds' object (60,676 genes)
+# which we created for the PCA plot.
+
+# Set the minimal filter
+# We'll keep genes that have a total of at least 10 reads
+# across all 15 samples. This is a very light "junk" filter.
+keep <- rowSums(counts(dds)) >= 10
+
+# Filter the dds object
+dds_minimal_filtered <- dds[keep, ]
+
+
+# Let's see how many genes we kept
+# This will be *more* genes than our 17,709, and that's good!
+print(paste("Original gene count:", nrow(dds)))
+print(paste("Filtered gene count (minimal):", nrow(dds_minimal_filtered)))
+```
+
+### PHASE 2 : Isogenic Analysis
+
+#### 2.1 : Isogenic Comparision
+
+```{r}
+# 2.1 : Isogenic Comparison
+
+
+# Subset our minimally-filtered dataset
+# We take 'dds_minimal_filtered' and keep only the columns
+# where the group is "Patient1" or "CRISPR_P1".
+dds_isogenic <- dds_minimal_filtered[ , dds_minimal_filtered$group %in% c("Patient1", "CRISPR_P1") ]
+
+# IMPORTANT: Remove unused factor levels
+# After subsetting, R still remembers "Patient2", "Patient3", etc.
+# This command drops those unused levels, which is crucial for DESeq.
+dds_isogenic$group <- droplevels(dds_isogenic$group)
+
+# Set the "Control" Level (Reference)
+# We MUST tell DESeq2 our baseline.
+# We want to see Patient1 *relative to* CRISPR_P1.
+dds_isogenic$group <- relevel(dds_isogenic$group, ref = "CRISPR_P1")
+
+# Run the Analysis
+# This single command runs the full DESeq pipeline
+# on our 6 selected samples.
+dds_isogenic <- DESeq(dds_isogenic)
+
+# Get the Results
+# This extracts the results table. DESeq2's automatic
+# independent filtering (your friend's point) happens here.
+res_isogenic <- results(dds_isogenic)
+
+# CHECK THE RESULTS
+# Let's see a summary
+# It will tell us how many genes are "up" or "down"
+# using the default 10% FDR (p-adj < 0.1).
+summary(res_isogenic)
+
+```
+
+#### 2.2 : Visualizations for significant genes : Volcano Plot
+
+```{r}
+# 2.2(A) : Volcano Plot 
+
+# Convert our results object to a data frame
+# ggplot2 works best with data frames.
+# Create Data Frame and Clean IDs
+res_isogenic_df <- as.data.frame(res_isogenic) %>%
+  rownames_to_column("ensembl_id_version") # Keep original IDs with version
+
+# Clean IDs for mapping (remove version)
+res_isogenic_df$ensembl_id_clean <- gsub("\\..*$", "", res_isogenic_df$ensembl_id_version)
+
+# Add a column to identify significant genes
+# We'll use the paper's cutoffs: padj < 0.05 and log2FC > 1 as specified before in 1.2
+res_isogenic_df <- res_isogenic_df %>%
+  mutate(
+    significant = case_when(
+      padj < fdr_cutoff & abs(log2FoldChange) > log2fc_cutoff ~ "Significant",
+      TRUE ~ "Not Significant" # 'TRUE' means "everything else"
+    )
+  )
+
+# How many genes met the paper's exact cutoff?
+sig_genes_cutoff_isogenic <- res_isogenic_df %>%
+  filter(significant == "Significant")
+
+print(paste(
+  "Total genes meeting paper's cutoff (FDR < 0.05 & FC > 2):", 
+  nrow(sig_genes_cutoff_isogenic)
+))
+
+# Create the Volcano Plot
+
+isogenic_res_vol <-  ggplot(res_isogenic_df,
+    aes(x = log2FoldChange, y = -log10(padj))) +
+    geom_point(aes(color = significant), size = 1, alpha = 0.5) +
+    scale_color_manual(
+      values = c("Not Significant" = "grey", "Significant" = "dodgerblue2" ),
+      name = "Significance"
+    ) +
+    
+    # Add vertical lines for our fold-change cutoff
+    geom_vline(xintercept = c(-log2fc_cutoff, log2fc_cutoff), linetype = "dashed", color = "black") +
+    
+    # Add a horizontal line for our p-value cutoff
+    geom_hline(yintercept = -log10(fdr_cutoff), linetype = "dashed", color = "black") +
+    
+    labs(
+      title = "Volcano Plot: Patient1 vs. CRISPR_P1",
+      x = "log2(Fold Change)",
+      y = "-log10(Adjusted P-value)"
+    ) +
+    theme_minimal(base_size = 14)
+
+isogenic_res_vol
+
+
+
+
+# (B) : Enhanced Volcano Plot 
+
+library(EnhancedVolcano)
+
+# Map Cleaned IDs to Gene Symbols
+gene_map_symbols <- mapIds(
+    org.Hs.eg.db, 
+    keys = res_isogenic_df$ensembl_id_clean, 
+    keytype = "ENSEMBL", 
+    column = "SYMBOL", 
+    multiVals = "first"
+    )
+
+# Add Symbol Column to Data Frame 
+# Use the cleaned Ensembl ID as the key to look up the symbol
+res_isogenic_df$symbol <- gene_map_symbols[res_isogenic_df$ensembl_id_clean]
+
+# Handle NAs: If symbol is NA, use the original Ensembl ID (with version)
+res_isogenic_df$symbol <- ifelse(
+    is.na(res_isogenic_df$symbol), 
+    res_isogenic_df$ensembl_id_version, # Fallback to original ID
+    res_isogenic_df$symbol
+    )
+
+# Identify Top Genes and DNAJC6 Symbol 
+
+# Find the symbol corresponding to DNAJC6's cleaned ID
+dnajc6_symbol <- res_isogenic_df$symbol[res_isogenic_df$ensembl_id_clean == "ENSG00000116675"][1] 
+
+# Get the symbols of the top 10 most significant genes
+iso_top_10_symbols <- res_isogenic_df %>%
+  filter(!is.na(padj)) %>%
+  arrange(padj) %>%
+  head(10) %>%
+  pull(symbol)
+
+# Combine DNAJC6 and top 10 for labeling
+iso_labels_to_show <- unique(c(dnajc6_symbol, iso_top_10_symbols))
+
+# Generate the Plot
+isogenic_enh_vol <- EnhancedVolcano(res_isogenic_df,
+    lab = res_isogenic_df$symbol, # Use the new symbol column for labels
+    x = 'log2FoldChange',
+    y = 'padj',
+    title = 'Volcano Plot: Patient1 vs. CRISPR_P1',
+    subtitle = 'Isogenic Comparison',
+    pCutoff = fdr_cutoff,         # Use parameterized cutoff
+    FCcutoff = log2fc_cutoff,     # Use parameterized cutoff
+    pointSize = 2.0,
+    labSize = 4.0,
+    selectLab = iso_labels_to_show,   # Label DNAJC6 and top 10 using symbols
+    drawConnectors = TRUE,
+    widthConnectors = 0.75,
+    max.overlaps = Inf,# Ensure all selected labels are shown
+    legendPosition = 'right'
+
+    )
+
+isogenic_enh_vol
+```
+
+#### 2.3 : Visualizations for top 50 deferentially expressed genes
+
+```{r}
+# 2.3 : Heatmap 
+
+
+# Get Top 50 Genes
+iso_top_50_genes <- res_isogenic %>%
+  as.data.frame() %>%
+  rownames_to_column("ensembl_id") %>%
+  filter(!is.na(padj)) %>%
+  arrange(padj) %>%
+  head(50)
+
+# Get Normalized Counts (for ALL 15 samples)
+vsd_counts_all_samples <- assay(vsd)
+iso_top_50_counts_all_samples <- vsd_counts_all_samples[iso_top_50_genes$ensembl_id, ]
+
+# Get the 6 sample names we *actually* want to plot
+isogenic_sample_names <- colnames(dds_isogenic)
+
+# Filter the counts matrix to only our 6 samples
+iso_top_50_counts <- iso_top_50_counts_all_samples[ , isogenic_sample_names]
+
+# Robust Gene Symbol Conversion
+gene_map <- mapIds(
+  org.Hs.eg.db,
+  keys = rownames(iso_top_50_counts),
+  keytype = "ENSEMBL",
+  column = "SYMBOL"
+)
+gene_symbols <- ifelse(is.na(gene_map), names(gene_map), gene_map)
+rownames(iso_top_50_counts) <- make.names(gene_symbols, unique = TRUE)
+
+# Create Column Annotations
+# 'annotation_col' has 6 rows
+# 'top_50_counts' now has 6 columns
+annotation_col <- data.frame(
+  Group = dds_isogenic$group
+)
+rownames(annotation_col) <- colnames(iso_top_50_counts) # <-- Lengths now match!
+
+# Generate the Improved Heatmap
+pheatmap(
+  iso_top_50_counts,
+  scale = "row",
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  main = "Top 50 Genes (Patient1 vs. CRISPR_P1)",
+  annotation_col = annotation_col,
+  border_color = NA,
+  fontsize_row = 8,
+)
+
+# The gene symbols are already stored as the row names 
+# of the 'top_50_counts' data frame we just plotted.
+
+iso_gene_symbol_list <- rownames(iso_top_50_counts)
+
+# Print the list to the console
+print(iso_gene_symbol_list)
+```
+
+#### 2.4 : GO Enrichment (Biological Process, Molecular Function and Cellular Compartment)
+
+```{r}
+# 2.4 Gene Ontology Enrichment (ORA)
+
+# Get our gene lists
+res_isogenic_df <- as.data.frame(res_isogenic) %>%
+  rownames_to_column("ensembl_id") # Get Ensembl IDs
+
+iso_all_tested_gene_ids <- rownames(res_isogenic)
+
+iso_sig_gene_ids <- res_isogenic_df %>%
+  filter(padj < fdr_cutoff & abs(log2FoldChange) > log2fc_cutoff & !is.na(padj)) %>%
+  pull(ensembl_id) # pull() gets the column as a vector
+
+
+# We'll use gsub() to find a dot (".") and anything after it ("\\..*$")
+# and replace it with nothing ("").
+iso_all_gene_ids_cleaned <- gsub("\\..*$", "", iso_all_tested_gene_ids)
+
+iso_sig_gene_ids_cleaned <- gsub("\\..*$", "", iso_sig_gene_ids)
+
+# Convert Ensembl IDs to Entrez IDs (using cleaned IDs)
+iso_all_entrez_ids <- mapIds(
+  org.Hs.eg.db,
+  keys = iso_all_gene_ids_cleaned, # Use cleaned IDs
+  keytype = "ENSEMBL",
+  column = "ENTREZID",
+  multiVals = "first"
+)
+
+iso_sig_entrez_ids <- mapIds(
+  org.Hs.eg.db,
+  keys = iso_sig_gene_ids_cleaned, # Use cleaned IDs
+  keytype = "ENSEMBL",
+  column = "ENTREZID",
+  multiVals = "first"
+)
+
+
+# Run the GO Enrichment (for Biological Process)
+# to know more use ?enrichGO
+
+iso_go_res_bp <- enrichGO(
+  gene = iso_sig_entrez_ids,
+  universe = iso_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "BP",                 # "BP" = Biological Process
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE             # This converts Entrez IDs back to Symbols
+)
+
+# CHECK THE RESULTS
+# Let's look at the top 5 hits
+
+#print(head(as.data.frame(go_results_ora), n = 5))
+
+# Plot the Results
+# A dot plot is the best way to see this
+plot_isogenic_go_res_bp <- print(
+  dotplot(iso_go_res_bp, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA): Top 15 Biological Processes") +
+    theme_minimal()
+)
+
+#print(go_results_ora$Description)
+
+# Run the GO Enrichment (for Molecular funtion)
+iso_go_res_mf <- enrichGO(
+  gene = iso_sig_entrez_ids,
+  universe = iso_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "MF",                 # "BP" = Biological Process
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE             # This converts Entrez IDs back to Symbols
+)
+
+plot_isogenic_go_res_mf <- print(
+  dotplot(iso_go_res_mf, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA): Top 15 Molecular functions") +
+    theme_minimal()
+)
+
+
+# Run the GO Enrichment (for Cellular Compartment)
+iso_go_res_cc <- enrichGO(
+  gene = iso_sig_entrez_ids,
+  universe = iso_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "CC",                 # "BP" = Biological Process
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE             # This converts Entrez IDs back to Symbols
+)
+
+plot_isogenic_go_res_cc <- print(
+  dotplot(iso_go_res_cc, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA): Top 15 Cellular Compartments") +
+    theme_minimal()
+)
+
+
+```
+
+#### 2.5 : Gene Set Enrichment Analysis
+
+```{r}
+# 2.5 : Gene Set Enrichment Analysis (GSEA)
+
+
+# Use 'select' to get a mapping data frame.
+# This is a bit more robust than mapIds for this purpose.
+iso_gene_map_df <- AnnotationDbi::select(
+  org.Hs.eg.db,
+  keys = iso_all_gene_ids_cleaned,
+  columns = c("ENTREZID"),
+  keytype = "ENSEMBL"
+) %>%
+  # remove duplicates, just keep first mapping
+  distinct(ENSEMBL, .keep_all = TRUE) 
+
+# Join map with our results
+# First, add the cleaned ENSEMBL ID to our results
+res_isogenic_df$ENSEMBL <- iso_all_gene_ids_cleaned
+
+# Now, join them
+iso_res_mapped <- inner_join(res_isogenic_df, iso_gene_map_df, by = "ENSEMBL")
+
+
+# Handle Duplicate Entrez IDs
+# We'll pick the gene with the "strongest" signal (highest absolute stat)
+iso_res_ranked <- iso_res_mapped %>%
+  filter(!is.na(stat) & !is.na(ENTREZID)) %>%
+  # Group by Entrez ID
+  group_by(ENTREZID) %>%
+  # Find the row with the max absolute 'stat' value
+  slice_max(order_by = abs(stat), n = 1) %>%
+  ungroup()
+
+# Create the Final Ranked List
+# This is the special vector GSEA needs:
+# values = the 'stat' column
+# names = the 'ENTREZID' column
+
+
+iso_gene_list_gsea <- iso_res_ranked$stat
+names(iso_gene_list_gsea) <- iso_res_ranked$ENTREZID
+
+# CRITICAL: Sort the list in decreasing order
+iso_gene_list_gsea_sorted <- sort(iso_gene_list_gsea, decreasing = TRUE)
+
+# Run GSEA for Biological Process
+# to know more use ?gseGO
+iso_gsea_bp_res <- gseGO(
+  geneList = iso_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "BP", # Biological Process
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+
+# Plot the GSEA Results
+# Dot plot of top 20 pathways
+iso_gsea_bp_plot <- dotplot(iso_gsea_bp_res, showCategory = 15) +
+    labs(title = "GSEA Results: Top 15 Biological Processes") +
+    theme_minimal()
+
+iso_gsea_bp_plot
+
+
+
+# Run GSEA for Molecular function
+iso_gsea_mf_res <- gseGO(
+  geneList = iso_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "MF", # Molecular function
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+
+# Plot the GSEA Results
+# Dot plot of top 20 funtions affected
+iso_gsea_mf_plot <- dotplot(iso_gsea_mf_res, showCategory = 15) +
+    labs(title = "GSEA Results: Top 15 Molecular Functions") +
+    theme_minimal()
+
+iso_gsea_mf_plot
+
+# Run GSEA for Cellular Compartment
+iso_gsea_cc_res <- gseGO(
+  geneList = iso_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "CC", # Molecular function
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+
+# Plot the GSEA Results
+# Dot plot of top 20 compartments
+iso_gsea_cc_plot <- dotplot(iso_gsea_cc_res, showCategory = 15) +
+    labs(title = "GSEA Results: Top 15 Cellular Compartments") +
+    theme_minimal()
+
+iso_gsea_cc_plot
+
+```
+
+#### 2.6 : Counting Keyword Frequencies in GSEA Results
+
+```{r}
+# 2.6 : Count Keyword Frequencies in GSEA Results
+
+
+# Get the list of all descriptions
+iso_gsea_descriptions <- as.data.frame(iso_gsea_bp_res)$Description %>%
+  c(as.data.frame(iso_gsea_mf_res)$Description) %>%
+  c(as.data.frame(iso_gsea_cc_res)$Description)
+
+# Define your keywords of interest (customize this list!)
+# We'll use some key themes we've seen.
+keywords_to_count <- c(
+  # Synaptic Function & Vesicle Recycling
+  "synap", "synapse", "synaptic", "synaptogenesis", "vesicle", "clathrin", 
+  "endocytosis", "neurotransmitter", "transmission", "recycle", "recycling",
+
+  # Neurodevelopment & Cell Fate
+  "develop", "development", "developmental", "neurog", "neurogenesis", "neuron", 
+  "neuronal", "differentiation", "fate", "specification", "progenitor", 
+  "morphogenesis", "Wnt", "signal", "signaling",
+
+  # Neuronal Structure
+  "axon", "axonogenesis", "dendrite", "dendritic", "terminus", "terminal", 
+  "cleft", "junction", "growth cone", "projection",
+
+  # Transcription & Regulation
+  "transcription", "regulation", "binding", "DNA binding", "protein binding", 
+  "factor", "repressor", "activator",
+
+  # Cell-Specific Keywords
+  "dopamine", "dopaminergic", "midbrain", "striat", "striatum", "corpus striatum"
+)
+
+# Count occurrences for each keyword (case-insensitive)
+iso_keyword_counts <- map_int(keywords_to_count, ~sum(str_detect(iso_gsea_descriptions, regex(.x, ignore_case = TRUE))))
+
+# Create a nice summary table
+iso_keyword_summary <- tibble(
+  Keyword = keywords_to_count,
+  Count = iso_keyword_counts
+) %>%
+  arrange(desc(Count)) # Sort by most frequent
+
+# Print the summary
+print(iso_keyword_summary, n = 50) # Print more rows if needed
+```
+
+### PHASE 3 : All Patients vs Control
+
+#### 3.1 : Deferential Gene Expression Analysis for all patients vs controls
+
+```{r}
+# 3.1 : Analysis 2 - All Patients vs. Controls
+
+# Prepare the Metadata
+# We need a new column defining our broad groups: "Patient" vs "Control".
+# We'll treat the CRISPR-corrected line as a 'Control' for this comparison,
+# as it represents the non-diseased state.
+colData <- colData %>%
+  mutate(status = case_when(
+    group %in% c("Control", "CRISPR_P1") ~ "Control_Group",
+    group %in% c("Patient1", "Patient2", "Patient3") ~ "Patient_Group"
+  ))
+
+# Convert the new column to a factor
+colData$status <- factor(colData$status)
+
+# Create the DESeqDataSet
+# We use our 'dds_minimal_filtered' object, which has all 15 samples.
+# The design formula is key: ~ genotype + status
+# This tells DESeq2: "First, account for differences due to the specific
+# 'genotype', and THEN find the differences due to 'status'."
+dds_all_patients <- DESeqDataSetFromMatrix(
+  countData = counts(dds_minimal_filtered), # Use counts from the filtered object
+  colData = colData,                         # Use our updated colData
+  design = ~ status
+)
+
+# Set the "Control" Level
+# We must tell DESeq2 which 'status' is the reference.
+dds_all_patients$status <- relevel(dds_all_patients$status, ref = "Control_Group")
+
+# Run the Analysis
+# This might take slightly longer as it's using all 15 samples.
+dds_all_patients <- DESeq(dds_all_patients)
+
+# Get the Results
+# We explicitly ask for the comparison "Patient_Group vs Control_Group".
+res_all_patients <- results(dds_all_patients, name = "status_Patient_Group_vs_Control_Group")
+
+# CHECK THE RESULTS
+# Let's see the summary (default 10% FDR).
+summary(res_all_patients)
+```
+
+#### 3.2 : Visualizations for significant genes : Volcano Plot
+
+```{r}
+# 3.2 : Volcano Plots
+
+# Setup: Ensure results are in a data frame
+# (Assuming res_all_patients is already created)
+res_all_patients_df <- as.data.frame(res_all_patients) %>%
+  rownames_to_column("ensembl_id_version") # Keep original IDs
+
+res_all_patients_df$ensembl_id_clean <- gsub("\\..*$", "", res_all_patients_df$ensembl_id_version)
+
+# 3.2(A) : Standard ggplot2 Volcano
+
+# Add significance column 
+res_all_patients_df <- res_all_patients_df %>%
+  mutate(
+    significant = case_when(
+      padj < fdr_cutoff & abs(log2FoldChange) > log2fc_cutoff ~ "Significant",
+      TRUE ~ "Not Significant"
+    )
+  )
+
+# Count significant genes 
+sig_genes_cutoff_all <- res_all_patients_df %>%
+  filter(significant == "Significant")
+
+print(paste(
+  "Total genes (Analysis 2) meeting cutoff:",
+  nrow(sig_genes_cutoff_all)
+))
+
+# Create the ggplot Volcano Plot
+# (Variables renamed for consistency with Analysis 1)
+all_patients_res_vol <- ggplot(res_all_patients_df, aes(x = log2FoldChange, y = -log10(padj))) +
+    geom_point(aes(color = significant), size = 1, alpha = 0.5) + 
+    scale_color_manual(
+      values = c("Not Significant" = "grey", "Significant" = "dodgerblue2"),
+      name = "Significance" # Set to match Analysis 1
+    ) +
+    geom_vline(xintercept = c(-log2fc_cutoff, log2fc_cutoff), linetype = "dashed", color = "black") +
+    geom_hline(yintercept = -log10(fdr_cutoff), linetype = "dashed", color = "black") +
+    labs(
+      title = "Volcano Plot: All Patients vs. Controls",
+      x = "log2(Fold Change)",
+      y = "-log10(Adjusted P-value)"
+    ) +
+    theme_minimal(base_size = 14)
+
+print(all_patients_res_vol) # Display the ggplot volcano
+
+
+
+# 3.2(B) : EnhancedVolcano Plot with Gene Symbols
+library(EnhancedVolcano)
+
+# Map IDs to Symbols for this dataframe
+gene_map_symbols_all <- mapIds(
+    org.Hs.eg.db, 
+    keys = res_all_patients_df$ensembl_id_clean, 
+    keytype = "ENSEMBL", 
+    column = "SYMBOL", 
+    multiVals = "first"
+    )
+
+res_all_patients_df$symbol <- gene_map_symbols_all[res_all_patients_df$ensembl_id_clean]
+res_all_patients_df$symbol <- ifelse(
+    is.na(res_all_patients_df$symbol), 
+    res_all_patients_df$ensembl_id_version, 
+    res_all_patients_df$symbol
+    )
+
+# Identify Top Genes and DNAJC6 Symbol
+# (Variables renamed for consistency with Analysis 1)
+dnajc6_symbol_all <- res_all_patients_df$symbol[res_all_patients_df$ensembl_id_clean == "ENSG00000116675"][1] 
+
+all_top_10_symbols <- res_all_patients_df %>%
+  filter(!is.na(padj)) %>%
+  arrange(padj) %>%
+  head(10) %>%
+  pull(symbol)
+
+all_labels_to_show <- unique(c(dnajc6_symbol_all, all_top_10_symbols))
+
+# Generate the EnhancedVolcano Plot
+all_patients_enh_vol <- EnhancedVolcano(res_all_patients_df,
+    lab = res_all_patients_df$symbol, 
+    x = 'log2FoldChange',
+    y = 'padj',
+    title = 'Volcano Plot: All Patients vs. Controls',
+    subtitle = 'Broader Comparison',
+    pCutoff = fdr_cutoff,        
+    FCcutoff = log2fc_cutoff,      
+    pointSize = 2.0,
+    labSize = 4.0,
+    selectLab = all_labels_to_show, # Use new consistent variable
+    drawConnectors = TRUE,
+    widthConnectors = 0.75,
+    max.overlaps = Inf,
+    legendPosition = 'right'
+)
+
+
+all_patients_enh_vol # Display the plot
+```
+
+#### 3.3 : Visualizations for top 50 deferentially expressed genes
+
+```{r}
+# 3.3 : Heatmap
+
+# Get Top 50 Genes
+all_top_50_genes <- res_all_patients %>%
+  as.data.frame() %>%
+  rownames_to_column("ensembl_id") %>% # Renamed column to match theme
+  filter(!is.na(padj)) %>%
+  arrange(padj) %>%
+  head(50)
+
+# Get Normalized Counts (for ALL 15 samples)
+# We assume 'vsd_counts_all_samples' still exists from the PCA step
+# vsd_counts_all_samples <- assay(vsd) 
+all_top_50_counts <- vsd_counts_all_samples[all_top_50_genes$ensembl_id, ]
+
+# Robust Gene Symbol Conversion
+gene_map_all <- mapIds(
+  org.Hs.eg.db,
+  keys = rownames(all_top_50_counts), # Using rownames directly
+  keytype = "ENSEMBL",
+  column = "SYMBOL"
+)
+gene_symbols_all <- ifelse(is.na(gene_map_all), names(gene_map_all), gene_map_all)
+rownames(all_top_50_counts) <- make.names(gene_symbols_all, unique = TRUE)
+
+# Create Column Annotations
+# This will have 15 rows for all 15 samples
+annotation_col_all <- data.frame(
+  Status = colData$status # Using the 'status' column (e.g., "Patient", "Control")
+)
+rownames(annotation_col_all) <- colnames(all_top_50_counts) 
+
+# Generate the Heatmap
+pheatmap(
+  all_top_50_counts,
+  scale = "row",
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  main = "Top 50 Genes (All Patients vs. Controls)",
+  annotation_col = annotation_col_all,
+  border_color = NA,
+  fontsize_row = 8
+)
+
+# The gene symbols are stored as the row names 
+# of the 'all_top_50_counts' data frame we just plotted.
+all_gene_symbol_list <- rownames(all_top_50_counts)
+
+# Print the list to the console
+# (Added this section to match your theme)
+print(all_gene_symbol_list)
+```
+
+#### 3.4 : GO Enrichment (Biological Process, Molecular Function and Cellular Compartment)
+
+```{r}
+# 3.4 Gene Ontology Enrichment (ORA)
+
+
+# Get our gene lists
+# We assume 'res_all_patients_df' exists from section 3.2
+all_all_tested_gene_ids <- rownames(res_all_patients)
+
+# Get sig genes using the 'significant' column created in 3.2
+all_sig_gene_ids <- res_all_patients_df %>%
+  filter(significant == "Significant") %>%
+  pull(ensembl_id_version) # pull() gets the column as a vector
+
+# Clean the Ensembl IDs (remove version)
+all_all_gene_ids_cleaned <- gsub("\\..*$", "", all_all_tested_gene_ids)
+all_sig_gene_ids_cleaned <- gsub("\\..*$", "", all_sig_gene_ids)
+
+# Convert Ensembl IDs to Entrez IDs (using cleaned IDs)
+all_all_entrez_ids <- mapIds(
+  org.Hs.eg.db,
+  keys = all_all_gene_ids_cleaned, # Use cleaned IDs
+  keytype = "ENSEMBL",
+  column = "ENTREZID",
+  multiVals = "first"
+)
+
+all_sig_entrez_ids <- mapIds(
+  org.Hs.eg.db,
+  keys = all_sig_gene_ids_cleaned, # Use cleaned IDs
+  keytype = "ENSEMBL",
+  column = "ENTREZID",
+  multiVals = "first"
+)
+
+# --- Run GO Enrichment (BP) ---
+all_go_res_bp <- enrichGO(
+  gene = all_sig_entrez_ids,
+  universe = all_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "BP",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (BP)
+plot_all_patients_go_res_bp <- print(
+  dotplot(all_go_res_bp, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - All Patients): Top 15 BP") +
+    theme_minimal()
+)
+
+# --- Run GO Enrichment (MF) ---
+all_go_res_mf <- enrichGO(
+  gene = all_sig_entrez_ids,
+  universe = all_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "MF",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (MF)
+plot_all_patients_go_res_mf <- print(
+  dotplot(all_go_res_mf, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - All Patients): Top 15 Molecular Functions") +
+    theme_minimal()
+)
+
+# --- Run GO Enrichment (CC) ---
+all_go_res_cc <- enrichGO(
+  gene = all_sig_entrez_ids,
+  universe = all_all_entrez_ids,
+  OrgDb = org.Hs.eg.db,
+  ont = "CC",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (CC)
+plot_all_patients_go_res_cc <- print(
+  dotplot(all_go_res_cc, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - All Patients): Top 15 Cellular Compartments") +
+    theme_minimal()
+)
+```
+
+#### 3.5 : Gene Set Enrichment Analysis
+
+```{r}
+# 3.5 : Gene Set Enrichment Analysis (GSEA)
+
+# Use 'select' to get a mapping data frame.
+# We assume 'all_all_gene_ids_cleaned' exists from section
+all_gene_map_df <- AnnotationDbi::select(
+  org.Hs.eg.db,
+  keys = all_all_gene_ids_cleaned,
+  columns = c("ENTREZID"),
+  keytype = "ENSEMBL"
+) %>%
+  # remove duplicates, just keep first mapping
+  distinct(ENSEMBL, .keep_all = TRUE) 
+
+# Join map with our results
+# We assume 'res_all_patients_df' 
+# Add the cleaned ENSEMBL ID to our results df
+res_all_patients_df$ENSEMBL <- all_all_gene_ids_cleaned
+
+# Now, join them
+all_res_mapped <- inner_join(res_all_patients_df, all_gene_map_df, by = "ENSEMBL")
+
+# Handle Duplicate Entrez IDs
+# We'll pick the gene with the "strongest" signal (highest absolute stat)
+all_res_ranked <- all_res_mapped %>%
+  filter(!is.na(stat) & !is.na(ENTREZID)) %>%
+  # Group by Entrez ID
+  group_by(ENTREZID) %>%
+  # Find the row with the max absolute 'stat' value
+  slice_max(order_by = abs(stat), n = 1) %>%
+  ungroup()
+
+# Create the Final Ranked List
+all_gene_list_gsea <- all_res_ranked$stat
+names(all_gene_list_gsea) <- all_res_ranked$ENTREZID
+
+# CRITICAL: Sort the list in decreasing order
+all_gene_list_gsea_sorted <- sort(all_gene_list_gsea, decreasing = TRUE)
+
+# --- Run GSEA for Biological Process ---
+all_gsea_bp_res <- gseGO(
+  geneList = all_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "BP", # Biological Process
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+# Plot the GSEA Results
+all_gsea_bp_plot <- dotplot(all_gsea_bp_res, showCategory = 15) +
+    labs(title = "GSEA Results (All Patients): Top 15 Biological Processes") +
+    theme_minimal()
+
+all_gsea_bp_plot
+
+# --- Run GSEA for Molecular function ---
+all_gsea_mf_res <- gseGO(
+  geneList = all_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "MF", # Molecular function
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+# Plot the GSEA Results
+all_gsea_mf_plot <- dotplot(all_gsea_mf_res, showCategory = 15) +
+    labs(title = "GSEA Results (All Patients): Top 15 Molecular Functions") +
+    theme_minimal()
+
+all_gsea_mf_plot
+
+# --- Run GSEA for Cellular Compartment ---
+all_gsea_cc_res <- gseGO(
+  geneList = all_gene_list_gsea_sorted,
+  OrgDb = org.Hs.eg.db,
+  ont = "CC", # Cellular Compartment
+  pvalueCutoff = fdr_cutoff,
+  pAdjustMethod = "BH",
+  verbose = TRUE # Shows progress
+)
+
+# Plot the GSEA Results
+all_gsea_cc_plot <- dotplot(all_gsea_cc_res, showCategory = 15) +
+    labs(title = "GSEA Results (All Patients): Top 15 Cellular Compartments") +
+    theme_minimal()
+
+all_gsea_cc_plot
+```
+
+#### 3.6 : Counting Keyword Frequencies in GSEA Results
+
+```{r}
+# 3.6 : Count Keyword Frequencies in GSEA Results (ANALYSIS 2) ###
+
+# Get the list of all descriptions from all three ontologies
+# (This now matches the theme)
+all_gsea_descriptions <- as.data.frame(all_gsea_bp_res)$Description %>%
+  c(as.data.frame(all_gsea_mf_res)$Description) %>%
+  c(as.data.frame(all_gsea_cc_res)$Description)
+
+# We assume 'keywords_to_count' is already defined from section 2.6
+# keywords_to_count <- c(...) 
+
+# Count occurrences for each keyword (case-insensitive)
+all_keyword_counts <- map_int(keywords_to_count, ~sum(str_detect(all_gsea_descriptions, regex(.x, ignore_case = TRUE))))
+
+# Create a nice summary table
+all_keyword_summary <- tibble(
+  Keyword = keywords_to_count,
+  Count = all_keyword_counts
+) %>%
+  arrange(desc(Count)) # Sort by most frequent
+
+# Print the summary
+print(all_keyword_summary, n = 50) # Print more rows if needed
+```
+
+### PHASE 4 : Common Analysis
+
+#### 4.1 : Compare Significant Gene Lists
+
+```{r}
+# 4.1 : Compare Significant Gene Lists (Aesthetic Venn Diagram)
+
+# Load the libraries
+library(ggVennDiagram)
+library(ggplot2) 
+
+# 1. Get the significant gene lists (Cleaned IDs)
+# We'll use the data frames we created in the volcano plot sections
+# (sig_genes_cutoff_isogenic from 2.2 and sig_genes_cutoff_all from 4.2)
+iso_sig_ids_cleaned <- sig_genes_cutoff_isogenic$ensembl_id_clean
+all_sig_ids_cleaned <- sig_genes_cutoff_all$ensembl_id_clean
+
+# Create the list object
+gene_lists <- list(
+  Isogenic = iso_sig_ids_cleaned,
+ `All Patients` = all_sig_ids_cleaned 
+)
+
+# Generate the Aesthetic Venn Diagram
+overlap_venn_plot <- ggVennDiagram(
+    gene_lists,
+    category.names = c("Isogenic Analysis", "All Patients Analysis"),
+    label = "both",           # Show count and percent (e.g., 957 (22%))
+    label_geom = "text",      # Use plain text for labels (no box)
+    label_color = "black",    # Color of the count/percent text
+    label_size = 5.5,         # Make count/percent text larger
+    label_percent_digit = 1   # Show one decimal place (e.g., 21.5%)
+  ) +
+  # Use a nice blue/cyan color palette
+  scale_fill_gradient(low = "#81D4FA", high = "#0277BD") + 
+  
+  # Add titles and subtitle
+  labs(
+    title = "Overlap of Significant Genes",
+    subtitle = paste0("FDR < ", fdr_cutoff, " & Fold Change > ", fc_cutoff)
+  ) +
+  
+  # Use a clean, blank theme
+  theme_void() + 
+  
+  # Style and center the titles
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    legend.position = "none" # Hide the gradient legend
+  ) +
+  
+  coord_sf(clip = "off") 
+
+print(overlap_venn_plot) # Display the plot
+
+# Get the list of overlapping genes (The "Core" Signature) 
+core_sig_gene_ids <- intersect(iso_sig_ids_cleaned, all_sig_ids_cleaned)
+
+print(paste("Number of core overlapping genes:", length(core_sig_gene_ids)))
+
+
+
+
+```
+
+#### 4.2 : Map Core Signature Genes to Symbols
+
+```{r}
+# 4.2 : Map Core Signature Genes to Symbols
+
+# We will use the 'core_sig_gene_ids' vector 
+# (from the previous Venn diagram step, section 5.1)
+
+# Map Ensembl IDs to Gene Symbols
+# 'core_sig_gene_ids' already contains cleaned IDs (no version).
+core_gene_map <- mapIds(
+  org.Hs.eg.db,
+  keys = core_sig_gene_ids, # Use the consistent variable
+  keytype = "ENSEMBL",
+  column = "SYMBOL",
+  multiVals = "first" # Handle one-to-many mappings
+)
+
+# Handle NAs (If a symbol isn't found, keep the Ensembl ID)
+core_gene_symbols <- ifelse(
+    is.na(core_gene_map), 
+    names(core_gene_map), # Use the Ensembl ID as a fallback
+    core_gene_map          # Otherwise, use the mapped symbol
+    )
+
+# Create a tibble for easier viewing and sorting
+# (Using tibble for theme consistency)
+core_gene_df <- tibble(
+  Ensembl_ID = names(core_gene_map), 
+  Gene_Symbol = core_gene_symbols
+) %>% 
+  arrange(Gene_Symbol) # Sort alphabetically by symbol
+
+# Print the resulting tibble
+print(core_gene_df, n = 20) # Print top 20
+
+overlap_df <- data.frame(
+  Ensembl_ID = names(core_gene_map), 
+  Gene_Symbol = core_gene_symbols
+) %>% 
+  arrange(Gene_Symbol) # Sort alphabetically by symbol
+
+
+# You can also print just the list of symbols:
+# print(core_gene_df$Gene_Symbol, n = 1000) 
+
+# You might want to save this list to a file for later reference:
+#write.csv(core_gene_df, "core_signature_genes.csv", row.names = FALSE)
+
+# You might want to save this list to a file for later reference:
+#write.table(overlap_df$Gene_Symbol, "overlapping genes.txt", sep = " ", row.names = FALSE)
+```
+
+#### 4.3 : GO Enrichment (Biological Process, Molecular Function and Cellular Compartment)
+
+```{r}
+# 4.3 : GO Enrichment (ORA) on Core Signature Genes ###
+
+# Get Gene Lists (Entrez IDs)
+
+# We will use 'core_sig_gene_ids' (Ensembl) from section 4.1
+# We will use 'iso_all_entrez_ids' (Entrez) from section 2.4 as our universe
+
+# Convert the Core Signature Ensembl IDs to Entrez IDs
+core_sig_entrez_ids <- mapIds(
+  org.Hs.eg.db,
+  keys = core_sig_gene_ids, # From 5.1
+  keytype = "ENSEMBL",
+  column = "ENTREZID",
+  multiVals = "first"
+)
+
+# Run GO Enrichment (BP)
+core_go_res_bp <- enrichGO(
+  gene = core_sig_entrez_ids,
+  universe = iso_all_entrez_ids, # Re-using from 2.4
+  OrgDb = org.Hs.eg.db,
+  ont = "BP",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (BP)
+plot_core_go_res_bp <- print(
+  dotplot(core_go_res_bp, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - Core Signature): Top 15 BP") +
+    theme_minimal()
+)
+
+# Run GO Enrichment (MF)
+core_go_res_mf <- enrichGO(
+  gene = core_sig_entrez_ids,
+  universe = iso_all_entrez_ids, 
+  OrgDb = org.Hs.eg.db,
+  ont = "MF",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (MF)
+plot_core_go_res_mf <- print(
+  dotplot(core_go_res_mf, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - Core Signature): Top 15 Molecular Functions") +
+    theme_minimal()
+)
+
+# Run GO Enrichment (CC)
+core_go_res_cc <- enrichGO(
+  gene = core_sig_entrez_ids,
+  universe = iso_all_entrez_ids, 
+  OrgDb = org.Hs.eg.db,
+  ont = "CC",           
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff,
+  readable = TRUE       
+)
+
+# Plot the Results (CC)
+plot_core_go_res_cc <- print(
+  dotplot(core_go_res_cc, showCategory = 15) + 
+    labs(title = "GO Enrichment (ORA - Core Signature): Top 15 Cellular Compartments") +
+    theme_minimal()
+)
+```
+
+#### 4.4 : KEGG Analysis
+
+```{r}
+# 4.4 : KEGG Enrichment (ORA) on Core Signature Genes
+
+# We will re-use the same Entrez ID lists from section 5.3:
+# 'core_sig_entrez_ids' (the core significant genes)
+# 'iso_all_entrez_ids' (the background universe from 2.4)
+
+# Run KEGG Enrichment (ORA)
+# Note: Requires an internet connection.
+core_kegg_res <- enrichKEGG(
+  gene = core_sig_entrez_ids,
+  universe = iso_all_entrez_ids,
+  organism = 'hsa', # 'hsa' is Homo sapiens
+  pAdjustMethod = "BH",
+  pvalueCutoff = fdr_cutoff,
+  qvalueCutoff = qval_cutoff
+)
+
+# Convert KEGG IDs back to Gene Symbols (for readability)
+if (!is.null(core_kegg_res)) {
+  core_kegg_res <- setReadable(core_kegg_res, OrgDb = org.Hs.eg.db, keyType="ENTREZID")
+} else {
+  print("No significant KEGG pathways found.")
+}
+
+# CHECK THE RESULTS
+print("--- Top KEGG Pathway Results (ORA - Core Signature) ---")
+if (!is.null(core_kegg_res)) {
+  print(head(as.data.frame(core_kegg_res), n = 15)) # Show top 15
+} 
+
+# Plot the Results (if any were found)
+if (!is.null(core_kegg_res) && nrow(as.data.frame(core_kegg_res)) > 0) {
+  plot_core_kegg_res <- print(
+    dotplot(core_kegg_res, showCategory = 15) + # Changed to 15
+      labs(title = "KEGG Enrichment (ORA - Core Signature): Top 15 Pathways") + # Changed to 15
+      theme_minimal()
+  )
+} else {
+    print("No significant KEGG pathways to plot.")
+}
+```
+
+#### 4.5 : Heatmap of Core Signature Genes
+
+```{r}
+# 4.5 : Heatmap of Core Signature Genes
+
+
+# We will use 'core_sig_gene_ids' (Ensembl, clean) from section 4.1
+# We will use 'res_isogenic_df' (from 2.2) to get significance ranks
+# We will use 'vsd_counts_all_samples' (the full 15-sample count matrix) from 2.1
+
+res_isogenic_df <- as.data.frame(res_isogenic) %>%
+  rownames_to_column("ensembl_id_version") # Keep original IDs with version
+
+# Clean IDs for mapping (remove version)
+res_isogenic_df$ensembl_id_clean <- gsub("\\..*$", "", res_isogenic_df$ensembl_id_version)
+
+res_isogenic_df$symbol <- gene_map_symbols[res_isogenic_df$ensembl_id_clean]
+
+
+res_isogenic_df$symbol <- ifelse(
+    is.na(res_isogenic_df$symbol), 
+    res_isogenic_df$ensembl_id_version, # Fallback to original ID
+    res_isogenic_df$symbol
+    )
+
+res_isogenic_df <- res_isogenic_df %>%
+  mutate(
+    significant = case_when(
+      padj < fdr_cutoff & abs(log2FoldChange) > log2fc_cutoff ~ "Significant",
+      TRUE ~ "Not Significant" # 'TRUE' means "everything else"
+    )
+  )
+
+# Get the VERSIONED Ensembl IDs for the TOP 50 core genes
+top_50_core_versioned_ids <- res_isogenic_df %>%
+  # First, keep only the genes from our core signature
+  filter(ensembl_id_clean %in% core_sig_gene_ids) %>%
+  # Next, sort them by significance (most significant first)
+  arrange(padj) %>%
+  # Now, take only the top 50
+  head(50) %>%
+  # Finally, pull their versioned IDs for the count matrix
+  pull(ensembl_id_version)
+
+# Get Normalized Counts for these 50 genes across ALL 15 samples
+top_50_core_counts <- vsd_counts_all_samples[top_50_core_versioned_ids, ]
+
+# Robust Gene Symbol Conversion
+gene_map_top_50_core <- mapIds(
+  org.Hs.eg.db,
+  keys = rownames(top_50_core_counts),
+  keytype = "ENSEMBL",
+  column = "SYMBOL"
+)
+gene_symbols_top_50_core <- ifelse(is.na(gene_map_top_50_core), names(gene_map_top_50_core), gene_map_top_50_core)
+rownames(top_50_core_counts) <- make.names(gene_symbols_top_50_core, unique = TRUE)
+
+# Create Column Annotations (for all 15 samples)
+# We assume 'colData' is still available
+annotation_col_all <- data.frame(
+  Status = colData$status # Use the 'status' column (Patient/Control)
+)
+rownames(annotation_col_all) <- colnames(top_50_core_counts) 
+
+# Generate the Heatmap
+pheatmap(
+  top_50_core_counts,
+  scale = "row",        # Scale genes to see relative changes (Z-score)
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  show_rownames = TRUE, # <-- CHANGED (We can now show the names)
+  show_colnames = TRUE, 
+  main = "Heatmap of Top 50 Core Signature Genes (All Samples)", # <-- CHANGED
+  annotation_col = annotation_col_all,
+  border_color = NA,
+  fontsize_row = 8      # <-- RE-ENABLED
+)
+```
+
+### PHASE 5 : Transcription Factor Analysis
+
+#### 5.1 : Upstream Transcription Factor (TF) Enrichment
+
+```{r}
+# 5.1 : Upstream Transcription Factor (TF) Enrichment
+
+# Load Libraries
+library(decoupleR)
+library(gt)        # For aesthetic tables
+library(ggrepel)   # For non-overlapping plot labels
+
+# --- 2. Get the Regulon (TF-target list) ---
+# We use DoRothEA levels A, B, C for a high-confidence regulon
+iso_regulon_dorothea <- get_dorothea(
+  organism = "human",
+  levels = c('A', 'B', 'C') 
+)
+
+# Prepare our Gene List (as a Matrix)
+# We re-use 'res_isogenic_df' from section 2.2
+iso_tf_input_data <- res_isogenic_df %>%
+  # Filter out genes that have no stat or no symbol
+  filter(!is.na(stat) & !is.na(symbol) & !grepl("^ENSG", symbol)) %>% 
+  dplyr::select(symbol, stat) %>%
+  distinct(symbol, .keep_all = TRUE) # Keep one stat per gene symbol
+
+# Convert to a named vector
+iso_tf_stat_vector <- iso_tf_input_data$stat
+names(iso_tf_stat_vector) <- iso_tf_input_data$symbol
+
+# Coerce to a 1-column matrix (required for run_mlm)
+iso_tf_stat_matrix <- as.matrix(iso_tf_stat_vector)
+colnames(iso_tf_stat_matrix) <- "isogenic_comparison"
+
+# Run the TF Enrichment (using 'mlm' method)
+iso_tf_activities <- run_mlm(
+  mat = iso_tf_stat_matrix, 
+  network = iso_regulon_dorothea,
+  .source = "source",  # TF column in regulon
+  .target = "target",  # Target gene column in regulon
+  .mor = "mor",        # Mode of regulation (score)
+  minsize = 5          # Min 5 target genes per TF
+)
+
+# Process and Tidy Results
+iso_tf_results <- iso_tf_activities %>%
+  # 'source' is the TF, 'condition' is our matrix column name
+  dplyr::select(TF = source, Activity_Score = score, P_Value = p_value) %>%
+  # Create a BH-adjusted p-value column
+  mutate(p_adj = p.adjust(P_Value, method = "BH")) %>%
+  arrange(p_adj)
+
+# Display Top TFs (gt Table)
+iso_tf_results %>%
+  head(20) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Predicted TFs (Isogenic Analysis)",
+    subtitle = "Based on multi-linear model (mlm) enrichment"
+  ) %>%
+  cols_label(
+    TF = "Transcription Factor",
+    Activity_Score = "Activity Score",
+    P_Value = "P-Value",
+    p_adj = "Adjusted P-Value"
+  ) %>%
+  fmt_scientific(
+    columns = c(P_Value, p_adj),
+    decimals = 2
+  ) %>%
+  fmt_number(
+    columns = Activity_Score,
+    decimals = 3
+  ) %>%
+  data_color(
+    columns = Activity_Score,
+    palette = c("#3C5488", "white", "#E64B35") # Blue -> White -> Red
+  ) %>%
+  tab_options(
+    table.border.top.color = "black",
+    heading.title.font.weight = "bold",
+    column_labels.font.weight = "bold"
+  )
+
+# --- 7. Visualize Top TFs (Bar Plot) ---
+iso_tf_barplot <- iso_tf_results %>%
+  head(20) %>%
+  mutate(TF = reorder(TF, Activity_Score)) %>%
+  ggplot(aes(x = TF, y = Activity_Score, fill = Activity_Score > 0)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_manual(
+    values = c("TRUE" = "#E64B35", "FALSE" = "#3C5488"),
+    labels = c("Repressed", "Activated"),
+    name = "TF Activity"
+  ) +
+  labs(
+    title = "Top 20 Enriched Transcription Factors (Analysis 1)",
+    subtitle = "Based on Isogenic (Patient1 vs. CRISPR_P1) DEGs",
+    x = "Transcription Factor",
+    y = "Activity Score (MLM)"
+  ) +
+  theme_minimal(base_size = 12) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+print(iso_tf_barplot)
+
+# --- 8. Visualize All TFs (Volcano Plot) ---
+iso_tf_volcano <- iso_tf_results %>%
+  mutate(
+    neg_log_p_adj = -log10(p_adj),
+    significant = p_adj < fdr_cutoff & abs(Activity_Score) > 0.5 
+  ) %>%
+  ggplot(aes(x = Activity_Score, y = neg_log_p_adj, color = significant, label = TF)) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_manual(
+    values = c("FALSE" = "gray70", "TRUE" = "#E64B35"),
+    name = "Significant"
+  ) +
+  geom_hline(yintercept = -log10(fdr_cutoff), linetype = "dashed", color = "black") +
+  geom_vline(xintercept = c(-0.5, 0.5), linetype = "dashed", color = "black") +
+  ggrepel::geom_text_repel(
+    data = . %>% filter(p_adj < 0.001 & abs(Activity_Score) > 1), # Label top hits
+    size = 3.5,
+    max.overlaps = 15
+  ) +
+  labs(
+    title = "TF Activity Landscape (Analysis 1)",
+    subtitle = "Significance vs. Effect Size",
+    x = "TF Activity Score (MLM)",
+    y = "-log10(Adjusted P-value)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+
+print(iso_tf_volcano)
+```
+
+#### 5.2 Analysis of Key TFs
+
+```{r}
+# 5.2 : Analysis of Key TFs
+
+# Check Key Neurodevelopmental TFs
+neuro_tfs_to_check <- c(
+  "FOXA2", "LMX1A", "LMX1B", "NR4A2", "PITX3", "EN1", "EN2", 
+  "SOX2", "PAX6", "NEUROD1", "TBR1", "REST", "FOXO1", "CREB1", "MEF2C",
+  "EGR1", "CTCF", "ATF4" # Adding TFs from your report
+)
+
+iso_neuro_tf_results <- iso_tf_results %>%
+  filter(TF %in% neuro_tfs_to_check) %>%
+  arrange(p_adj) %>%
+  mutate(
+    Direction = ifelse(Activity_Score > 0, "Activated", "Repressed"),
+    Significant = ifelse(p_adj < fdr_cutoff, "Yes", "No")
+  )
+
+# Display with gt
+iso_neuro_tf_results %>%
+  gt() %>%
+  tab_header(title = "Activity of Key Neurodevelopmental TFs") %>%
+  fmt_scientific(columns = P_Value, decimals = 2) %>%
+  fmt_scientific(columns = p_adj, decimals = 2) %>%
+  fmt_number(columns = Activity_Score, decimals = 3) %>%
+  data_color(
+    columns = Activity_Score,
+    palette = c("#3C5488", "white", "#E64B35")
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      columns = Significant,
+      rows = Significant == "Yes"
+    )
+  )
+
+# Check if Significantly Active TFs are also DEGs
+iso_tf_significant_names <- iso_tf_results %>%
+  filter(p_adj < fdr_cutoff) %>%
+  pull(TF)
+
+iso_tf_expression <- res_isogenic_df %>%
+  filter(symbol %in% iso_tf_significant_names) %>%
+  dplyr::select(TF = symbol, log2FoldChange, padj) %>%
+  mutate(
+    Status = ifelse(padj < fdr_cutoff, "Significant DE", "Not DE")
+  ) %>%
+  arrange(padj)
+
+# Display with gt
+iso_tf_expression %>%
+  gt() %>%
+  tab_header(title = "Expression Status of Significantly Active TFs") %>%
+  fmt_number(columns = log2FoldChange, decimals = 2) %>%
+  fmt_scientific(columns = padj, decimals = 2) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      columns = Status,
+      rows = Status == "Significant DE"
+    )
+  ) %>%
+  tab_footnote(
+    footnote = "Note: Activity can change (e.g., via phosphorylation) even if the TF's own gene expression does not.",
+    locations = cells_title()
+  )
+
+# 3. Export Results to File
+write.csv(
+  iso_tf_results %>% filter(p_adj < fdr_cutoff),
+  "TF_enrichment_significant_results.csv",
+  row.names = FALSE
+)
+```
+
+### PHASE 6 : STRING DB
+
+<https://version-12-0.string-db.org/cgi/network?networkId=bAVOdXXjJ2xe>
+
+#### 6.1 : STRING DB Network
+
+![](string%20db%20overlapping%20genes/stringdb_overlapping_genes_vector_graphic.svg)
+
+#### 6.2 : Top enrichment processes
+
+![](string%20db%20overlapping%20genes/stringdb_overlapgenes_enrichment_Process_sim0.8_graph.svg)
+
+### PHASE 7 : Identifying potential lncRNA and Non-coding gene involvement
+
+#### 7.1 : Novel lncRNA & Non-Coding Gene Discovery
+
+```{r}
+# 7.1 : Novel Non-Coding Gene Discovery
+
+# Load Libraries
+library(biomaRt)
+library(DT) # For interactive tables
+
+# Get All Significant Gene IDs (from Isogenic Analysis)
+# We re-use 'res_isogenic_df' from section 2.2
+iso_sig_genes_df <- res_isogenic_df %>%
+  filter(significant == "Significant") # Use the column we already made
+
+iso_sig_ensembl_cleaned <- iso_sig_genes_df$ensembl_id_clean
+
+# Find "Unmappable" IDs (the non-coding candidates)
+# Find genes that do NOT map to an Entrez ID (which org.Hs.eg.db uses)
+entrez_map <- mapIds(org.Hs.eg.db,
+                     keys = iso_sig_ensembl_cleaned,
+                     keytype = "ENSEMBL",
+                     column = "ENTREZID",
+                     multiVals = "first")
+
+iso_unmappable_ids <- names(entrez_map[is.na(entrez_map)])
+
+print(paste("Found", length(iso_unmappable_ids), "significant genes not in Entrez/org.Hs.eg.db (non-coding candidates)"))
+
+# Annotate Unknown IDs with biomaRt
+if (length(iso_unmappable_ids) > 0) {
+  ensembl_mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+  
+  iso_gene_annotations <- getBM(
+    attributes = c('ensembl_gene_id', 'external_gene_name', 'gene_biotype', 'description'),
+    filters = 'ensembl_gene_id',
+    values = iso_unmappable_ids, 
+    mart = ensembl_mart
+  )
+
+  # Join with expression data
+  iso_novel_hits_df <- iso_gene_annotations %>%
+    # Join annotations with our DESeq2 results
+    left_join(
+      res_isogenic_df %>% dplyr::select(ensembl_id_clean, log2FoldChange, padj, baseMean), 
+      by = c("ensembl_gene_id" = "ensembl_id_clean")
+    ) %>%
+    distinct(ensembl_gene_id, .keep_all = TRUE) %>%
+    arrange(padj) # Sort by most significant
+
+  # --- 6. Display All Novel Hits (Interactive) ---
+  print("--- Discovered Significant Non-Coding & Novel Genes ---")
+  print(
+    datatable(iso_novel_hits_df, 
+              caption = "Top Dysregulated Non-Coding & Unmapped Genes",
+              options = list(pageLength = 10, scrollX = TRUE),
+              rownames = FALSE,
+              filter = 'top'
+              )
+  )
+  
+  # Save the list
+  write.csv(iso_novel_hits_df, "novel_significant_genes.csv", row.names = FALSE)
+
+  # Filter for and Display lncRNAs
+  iso_lncrna_hits_df <- iso_novel_hits_df %>%
+    filter(gene_biotype == "lncRNA")
+    
+  print("--- Of these, the following are lncRNAs: ---")
+  print(
+    datatable(iso_lncrna_hits_df, 
+              caption = "Top Dysregulated lncRNAs",
+              options = list(pageLength = 10, scrollX = TRUE),
+              rownames = FALSE,
+              filter = 'top'
+              )
+  )
+  
+  write.csv(iso_lncrna_hits_df, "novel_significant_lncRNAs.csv", row.names = FALSE)
+  
+} else {
+  print("No unmapped significant genes were found.")
+}
+```
+
+#### 7.2 : Co-expression Heatmap
+
+```{r}
+# 7.2 : Co-expression Heatmap (lncRNA vs. Key Genes) 
+
+# Load Libraries
+library(pheatmap)
+
+# Define Target Gene Lists
+# We re-use 'iso_lncrna_hits_df' from 7.1
+iso_top_lncrnas <- iso_lncrna_hits_df %>%
+  head(5) %>% # Take top 5 most significant
+  pull(external_gene_name) # Get their gene symbols
+
+# Key PD & Neurodevelopmental genes to check against
+iso_key_dev_genes <- c(
+  "DNAJC6", "SNCA", "CLTC",  # Key PD/CME genes
+  "DLX1", "DLX2", "DLX5", "DLX6", # DLX family (partner for DLX6-AS1)
+  "FOXA2", "NEUROD1", "LMX1A", "PAX6", # Top neurodev TFs from ORA
+  "EGR1", "ATF4", # Top TFs from decoupleR
+  "DNAJC6", # Your causal gene
+  "SNCA",   # Alpha-synuclein
+  "CLTC",   # Clathrin Heavy Chain
+  "SYN1"    # Synapsin I
+)
+
+iso_all_heatmap_symbols <- unique(c(iso_top_lncrnas, iso_key_dev_genes))
+
+# Get Normalized Counts for Target Genes
+# We re-use 'vsd' (from 2.1) and 'res_isogenic_df' (from 2.2)
+if (!exists("vsd")) {
+  stop("Error: 'vsd' object not found. Please run the PCA chunk (2.1) first.")
+}
+
+# Find the Ensembl IDs (with version) that match our symbols
+iso_target_ensembl_ids <- res_isogenic_df %>%
+  filter(symbol %in% iso_all_heatmap_symbols) %>%
+  distinct(symbol, .keep_all = TRUE) %>% # Handle duplicate symbols
+  pull(ensembl_id_version)
+  
+# Get normalized counts for these genes across all 15 samples
+# and transpose it (so genes are columns, samples are rows)
+iso_cor_matrix_data <- t(assay(vsd)[iso_target_ensembl_ids, ])
+
+# Set Column Names to Gene Symbols
+# We need to map the versioned IDs back to symbols
+symbol_map_df <- res_isogenic_df %>%
+  filter(ensembl_id_version %in% iso_target_ensembl_ids) %>%
+  dplyr::select(ensembl_id_version, symbol)
+
+# Match the column names (versioned IDs) to their symbols
+colnames(iso_cor_matrix_data) <- symbol_map_df$symbol[
+  match(colnames(iso_cor_matrix_data), symbol_map_df$ensembl_id_version)
+]
+
+# Calculate Correlation Matrix
+iso_cor_matrix <- cor(iso_cor_matrix_data, method = "pearson", use = "pairwise.complete.obs")
+
+# Plot Correlation Heatmap
+print(
+  pheatmap(
+    iso_cor_matrix,
+    main = "Co-expression: Top lncRNAs vs. Key PD & Development Genes",
+    fontsize_row = 10,
+    fontsize_col = 10,
+    color = colorRampPalette(c("#3C5488", "white", "#E64B35"))(50), # Blue-White-Red
+    cluster_rows = TRUE,
+    cluster_cols = TRUE,
+    display_numbers = TRUE, # Show correlation values
+    number_format = "%.2f", # Format to 2 decimal places
+    fontsize_number = 8,
+    border_color = "grey60"
+  )
+)
+```
+
+```{r}
+### Session Information ###
+sessionInfo()
+```
