@@ -1,0 +1,3 @@
+"source","term_id","term_name","p_value","term_size","query_size","intersection_size","effective_domain_size"
+"HPA","HPA:0260141","Hypothalamus; neuronal projections[≥Low]",0.0065531806629871,29,330,7,10995
+"HPA","HPA:0260142","Hypothalamus; neuronal projections[≥Medium]",0.0361570597979841,28,330,6,10995
