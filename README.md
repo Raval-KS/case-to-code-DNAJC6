@@ -4,8 +4,7 @@
 
 This analysis is part of a manuscript currently being prepared for submission:
 
-**Title:** "Integrative Multi-Omic Analysis Reveals lncRNA-Mediated GABAergic 
-Compensation in DNAJC6 Developmental Parkinsonism"
+**Title:** "Integrative Multi-Omic Analysis Reveals Synaptic Vesicle Recycling Failure and Neurodevelopmental Reprogramming in DNAJC6 Developmental Parkinsonism"
 
 **Authors:** Raval KS, et al.
 
