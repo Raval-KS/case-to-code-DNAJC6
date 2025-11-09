@@ -1,5 +1,33 @@
 # Case-to-Code: Transcriptomic Dissection of DNAJC6-Linked Early-Onset Parkinsonism
 
+# NOTICE: Manuscript in Preparation
+
+This analysis is part of a manuscript currently being prepared for submission:
+
+**Title:** "Integrative Multi-Omic Analysis Reveals lncRNA-Mediated GABAergic 
+Compensation in DNAJC6 Developmental Parkinsonism"
+
+**Authors:** Raval KS, et al.
+
+**Status:** Manuscript in preparation for bioRxiv submission
+
+**Key Findings:** This work identifies novel lncRNA regulatory networks, 
+including the DLX6-AS1 → DLX6 regulatory module, in DNAJC6 parkinsonism.
+
+**Copyright:** © 2025 Raval Kush. All rights reserved.
+
+**Note:** This work represents original research conducted by Raval Kush. Unauthorized use or reproduction of these findings without 
+proper attribution constitutes academic misconduct.
+
+**Contact:** raval.kush.sci@gmail.com
+
+**DOI:** [Will be added upon preprint submission]
+
+Last Updated: 09/11/25
+
+
+
+
 This repository contains the full computational analysis for a "Case-to-Code" project investigating the molecular mechanisms of Infantile Parkinsonism (IPD) linked to *DNAJC6* mutations.
 
 The analysis begins with a clinical case and proceeds to a full transcriptomic re-analysis of a public iPSC-derived neuron dataset (GSE208353), moving from raw data to a complete regulatory hypothesis.
